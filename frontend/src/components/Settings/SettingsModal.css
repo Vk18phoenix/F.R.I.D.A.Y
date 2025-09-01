@@ -1,0 +1,46 @@
+.settings-modal {
+  max-width: 500px;
+}
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+.setting-item:last-of-type { border-bottom: none; }
+.setting-item label { font-weight: 500; color: var(--text-color); }
+.setting-control { display: flex; align-items: center; gap: 8px; }
+
+.setting-control button {
+  background-color: var(--sidebar-background);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.setting-control button:hover { background-color: var(--selection-background-color); }
+
+.setting-control button.active {
+  background-color: var(--primary-color);
+  color: var(--user-message-text);
+  border-color: var(--primary-color);
+}
+
+.setting-text, .location-text { color: var(--secondary-text-color); margin: 0; }
+
+.manage-account-btn, .feedback-link, .update-location-btn {
+  color: var(--primary-color);
+  text-decoration: none;
+  background: none;
+  border: none;
+  font-size: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+.manage-account-btn:hover, .feedback-link:hover, .update-location-btn:hover { text-decoration: underline; }
+
+.location-text { margin-right: 8px; }
+.update-location-btn { font-size: 0.8rem; }
