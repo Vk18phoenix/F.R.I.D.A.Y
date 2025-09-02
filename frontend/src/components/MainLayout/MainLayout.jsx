@@ -18,12 +18,12 @@ import {
   saveTempChat,
   getTempChat,
   reportMessage,
-  updateProfile
 } from '../../services/apiService.js';
 import { useAuth } from '../../AuthContext';
 import aiLogo from "../../assets/ai-logo.png";
 import appLogo from "../../assets/Haven_Logo.png";
 
+const API_URL = "http://localhost:5000";
 const SpeechRecognition = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
 const BANNED_KEYWORDS = ['kill', 'suicide', 'bomb', 'terrorist', 'hate speech'];
 const nowId = () => Date.now().toString();
@@ -52,11 +52,21 @@ const MainLayout = ({ onNavigateToAuth }) => {
     isListening: false,
   });
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, chatId: null });
-  const [avatarUrl, setAvatarUrl] = useState(user?.avatar || '/default-avatar.png');
+  const [avatarUrl, setAvatarUrl] = useState('/default-avatar.png');
   const [aiVoice, setAiVoice] = useState('female');
   const [voices, setVoices] = useState([]);
   const promptInputRef = useRef(null);
   const recognitionRef = useRef(null);
+
+  // ✅ Update avatar when user changes
+  useEffect(() => {
+    if (user?.avatar) {
+      const fullUrl = user.avatar.startsWith("http") ? user.avatar : `${API_URL}${user.avatar}`;
+      setAvatarUrl(fullUrl);
+    } else {
+      setAvatarUrl('/default-avatar.png');
+    }
+  }, [user?.avatar]);
 
   const getGreeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -116,7 +126,7 @@ const MainLayout = ({ onNavigateToAuth }) => {
           setChatState(prev => ({ ...prev, history: [], activeId: null }));
           setMessages([]);
         }
-        setAvatarUrl(user?.avatar || '/default-avatar.png');
+        // Avatar URL is now managed by the separate useEffect
       } else if (!isAuthenticated) {
         const tempMessages = getTempChat();
         setMessages(tempMessages);
@@ -126,7 +136,7 @@ const MainLayout = ({ onNavigateToAuth }) => {
     };
     loadChatHistory();
     return () => { mounted = false; };
-  }, [isAuthenticated, user?.id, user?.avatar]);
+  }, [isAuthenticated, user?.id]); // Removed user.avatar from dependency array here
 
   const speakText = useCallback((text) => {
     if (!aiVoice || !text || voices.length === 0 || window.speechSynthesis.speaking) return;
@@ -227,7 +237,10 @@ const MainLayout = ({ onNavigateToAuth }) => {
   }, [uiState.isListening, handleSendMessage]);
 
   const handleProfileUpdate = useCallback((newUpdates) => {
-    if (newUpdates?.avatar) setAvatarUrl(newUpdates.avatar);
+    if (newUpdates?.avatar) {
+      const fullUrl = newUpdates.avatar.startsWith("http") ? newUpdates.avatar : `${API_URL}${newUpdates.avatar}`;
+      setAvatarUrl(fullUrl);
+    }
   }, []);
 
   const handleLogout = useCallback(() => {
@@ -400,7 +413,12 @@ const MainLayout = ({ onNavigateToAuth }) => {
         <div className="main-header">
           <div className="header-brand"> <span>Friday.AI</span> </div>
           {isAuthenticated ? (
-            <img src={avatarUrl || '/default-avatar.png'} className="user-avatar" onClick={() => setUiState(prev => ({ ...prev, showProfileModal: true }))} />
+            <img
+              src={avatarUrl}
+              className="user-avatar"
+              alt="User Avatar"
+              onClick={() => setUiState(prev => ({ ...prev, showProfileModal: true }))}
+            />
           ) : (
             <button className="auth-button-header" onClick={onNavigateToAuth}> <UserCircle size={20} /> <span>Login</span> </button>
           )}
@@ -449,7 +467,13 @@ const MainLayout = ({ onNavigateToAuth }) => {
       </div>
 
       {uiState.showPaywall && <PaywallModal onClose={() => setUiState(prev => ({ ...prev, showPaywall: false, isGuestLocked: true }))} onAuth={onNavigateToAuth} />}
-      {isAuthenticated && uiState.showProfileModal && <ProfileModal user={user} onUpdate={handleProfileUpdate} onClose={() => setUiState(prev => ({ ...prev, showProfileModal: false }))} />}
+      {isAuthenticated && uiState.showProfileModal && (
+        <ProfileModal
+          user={user}
+          onUpdate={handleProfileUpdate}
+          onClose={() => setUiState(prev => ({ ...prev, showProfileModal: false }))}
+        />
+      )}
       {isAuthenticated && uiState.showSettingsModal && <SettingsModal onClose={() => setUiState(prev => ({ ...prev, showSettingsModal: false }))} onThemeChange={(theme) => (document.documentElement.className = theme || '')} onVoiceChange={setAiVoice} currentVoice={aiVoice} onFeedbackClick={() => { setUiState(prev => ({ ...prev, showSettingsModal: false, showFeedbackModal: true })); }} onAccountSettingsClick={() => { setUiState(prev => ({ ...prev, showSettingsModal: false, showAccountSettingsModal: true })); }} />}
       {isAuthenticated && uiState.showAccountSettingsModal && <AccountSettingsModal user={user} onClose={() => setUiState(prev => ({ ...prev, showAccountSettingsModal: false }))} onHistoryDelete={handleHistoryDelete} />}
       {isAuthenticated && uiState.showFeedbackModal && <FeedbackModal user={user} onClose={() => setUiState(prev => ({ ...prev, showFeedbackModal: false }))} />}

@@ -1,125 +1,160 @@
-// src/components/Profile/ProfileModal.jsx
+import React, { useState } from "react";
+import toast from "react-hot-toast";
+import { useAuth } from "../../AuthContext";
+import "./ProfileModal.css";
 
-import React, { useState } from 'react';
-import imageCompression from 'browser-image-compression';
-import './ProfileModal.css';
-import axios from 'axios';
+const API_URL = "http://localhost:5000";
+const EMOJIS = ["😊", "😎", "🚀", "🎉", "💻", "💡", "❤️", "🧠"];
 
-const EMOJIS = ['😊', '😎', '🚀', '🎉', '💻', '💡', '❤️', '🧠'];
+const ProfileModal = ({ onClose, onUpdate }) => {
+  const { user, setUser } = useAuth();
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [feedback, setFeedback] = useState("Upload a new image or choose an emoji.");
 
-const ProfileModal = ({ user, onClose, onUpdate }) => {
-  const [loading, setLoading] = useState(false);
-  const [feedback, setFeedback] = useState('Upload a new image or choose an emoji.');
+  const getToken = () => localStorage.getItem("authToken") || null;
 
-  // ✅ Upload avatar to backend
-  const handleAvatarUpload = async (fileToUpload) => {
-    if (!fileToUpload) return;
-    setLoading(true);
-    setFeedback('Uploading picture...');
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file)); // 👈 show preview before upload
+      setFeedback("File selected. Ready to upload.");
+    }
+  };
+
+  const handleAvatarUpload = async (fileToUpload = selectedFile) => {
+    if (!fileToUpload) {
+      toast.error("Please select a file to upload");
+      setFeedback("Please select a file to upload.");
+      return;
+    }
+
+    const token = getToken();
+    if (!token) {
+      toast.error("Authentication failed. Please log in again.");
+      setFeedback("Authentication failed. Please log in again.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("avatar", fileToUpload);
 
     try {
-      const formData = new FormData();
-      formData.append("avatar", fileToUpload);
+      setUploading(true);
+      setFeedback("Uploading avatar...");
 
-      const res = await axios.post(
-        `${process.env.REACT_APP_API_URL || "http://localhost:5000"}/api/users/${user._id}/avatar`,
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
+      const res = await fetch(`${API_URL}/api/auth/profile/avatar`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
 
-      setFeedback('Profile updated successfully!');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || `Error: ${res.status} ${res.statusText}`);
+      }
 
-      // ✅ Append timestamp to avoid browser caching old image
-      const updatedUrl = `${res.data.avatarUrl}?t=${Date.now()}`;
+      const data = await res.json();
+      toast.success("Avatar uploaded successfully!");
+      setFeedback("Avatar uploaded successfully!");
 
-      if (onUpdate) onUpdate({ avatarUrl: updatedUrl });
+      if (data.user) {
+        // ✅ Force refresh with timestamp to break cache
+        const avatarWithTimestamp = data.user.avatar?.startsWith("http")
+          ? `${data.user.avatar}?t=${Date.now()}`
+          : `${API_URL}${data.user.avatar}?t=${Date.now()}`;
 
-      setTimeout(() => onClose(), 1000);
+        const updatedUser = { ...data.user, avatar: avatarWithTimestamp };
+
+        setUser(updatedUser); // ✅ global update
+        localStorage.setItem("userInfo", JSON.stringify(updatedUser));
+
+        setPreviewUrl(null);
+        setSelectedFile(null);
+
+        if (onUpdate) onUpdate(updatedUser);
+      }
     } catch (error) {
       console.error("Error uploading avatar:", error);
-      setFeedback(`Something went wrong: ${error.response?.data?.message || error.message}`);
+      toast.error(error.message || "Error uploading avatar");
+      setFeedback(`Error: ${error.message}`);
     } finally {
-      setLoading(false);
+      setUploading(false);
     }
   };
 
-  // ✅ Compress image before upload
-  const handleFileChangeAndCompress = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setFeedback('Compressing image...');
-    const options = { maxSizeMB: 0.5, maxWidthOrHeight: 800, useWebWorker: true };
-
-    try {
-      const compressedFile = await imageCompression(file, options);
-      setFeedback('Image ready to upload!');
-      await handleAvatarUpload(compressedFile);
-    } catch (error) {
-      console.error("Image compression error:", error);
-      setFeedback('Could not process this image. Please try another.');
-    }
-  };
-
-  // ✅ Generate avatar from emoji
   const handleEmojiSelect = async (emoji) => {
-    setFeedback('Generating emoji picture...');
-    setLoading(true);
+    setFeedback("Generating emoji picture...");
+    setUploading(true);
 
-    const canvas = document.createElement('canvas');
+    const canvas = document.createElement("canvas");
     const size = 256;
     canvas.width = size;
     canvas.height = size;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
 
-    ctx.fillStyle = '#3a3d40';
+    ctx.fillStyle = "#3a3d40";
     ctx.beginPath();
     ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2, true);
     ctx.fill();
 
-    ctx.fillStyle = 'white';
+    ctx.fillStyle = "white";
     ctx.font = `${size * 0.6}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     ctx.fillText(emoji, size / 2, size / 2);
 
     canvas.toBlob(async (blob) => {
       if (blob) {
         await handleAvatarUpload(new File([blob], "emoji.png", { type: "image/png" }));
       } else {
-        setFeedback('Failed to generate emoji image.');
-        setLoading(false);
+        setFeedback("Failed to generate emoji image.");
+        setUploading(false);
       }
-    }, 'image/png');
+    }, "image/png");
   };
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <h2>Update Profile Picture</h2>
         <p className="feedback-text">{feedback}</p>
+
+        {/* ✅ Preview section */}
+        <div className="avatar-preview">
+          <img
+            src={previewUrl || user?.avatar || "/default-avatar.png"}
+            alt="Avatar Preview"
+            style={{ width: "120px", height: "120px", borderRadius: "50%" }}
+          />
+        </div>
 
         <div className="upload-section">
           <label className="upload-button-label">
             Choose an Image
             <input
               type="file"
-              onChange={handleFileChangeAndCompress}
+              onChange={handleFileChange}
               accept="image/*"
-              disabled={loading}
-              style={{ display: 'none' }}
+              disabled={uploading}
+              style={{ display: "none" }}
             />
           </label>
+          <button onClick={() => handleAvatarUpload(selectedFile)} disabled={uploading}>
+            {uploading ? "Uploading..." : "Upload Avatar"}
+          </button>
         </div>
 
         <div className="emoji-section">
           <p>Or select an emoji:</p>
           <div className="emoji-grid">
-            {EMOJIS.map(emoji => (
+            {EMOJIS.map((emoji) => (
               <div
                 key={emoji}
-                className={`emoji-item ${loading ? 'disabled' : ''}`}
-                onClick={() => !loading && handleEmojiSelect(emoji)}
+                className={`emoji-item ${uploading ? "disabled" : ""}`}
+                onClick={() => !uploading && handleEmojiSelect(emoji)}
               >
                 {emoji}
               </div>
@@ -127,8 +162,8 @@ const ProfileModal = ({ user, onClose, onUpdate }) => {
           </div>
         </div>
 
-        <button className="close-button" onClick={onClose} disabled={loading}>
-          {loading ? 'Please wait...' : 'Cancel'}
+        <button className="close-button" onClick={onClose} disabled={uploading}>
+          {uploading ? "Please wait..." : "Cancel"}
         </button>
       </div>
     </div>
