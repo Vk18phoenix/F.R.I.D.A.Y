@@ -7,19 +7,19 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 
-// Resolve __dirname in ES modules
+// ------------------ RESOLVE __dirname IN ES MODULES ------------------
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ------------------ CORS ------------------
+// ------------------ CORS CONFIG ------------------
 // Allowed origins: local dev + deployed frontend
 const allowedOrigins = [
-  'http://localhost:3000', // CRA
-  'http://localhost:5173', // Vite
-  process.env.CLIENT_URL   // deployed frontend
+  'http://localhost:3000', // CRA local dev
+  'http://localhost:5173', // Vite local dev
+  process.env.CLIENT_URL   // deployed frontend (Vercel)
 ].filter(Boolean);
 
 app.use(cors({
@@ -28,10 +28,9 @@ app.use(cors({
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-    const msg = `The CORS policy does not allow access from: ${origin}`;
-    return callback(new Error(msg), false);
+    return callback(new Error(`CORS policy does not allow access from: ${origin}`), false);
   },
-  credentials: true, // if using cookies or auth headers
+  credentials: true, // required if using cookies or auth headers
 }));
 
 // ------------------ BODY PARSERS ------------------
@@ -49,15 +48,15 @@ if (!fs.existsSync(avatarUploadDir)) fs.mkdirSync(avatarUploadDir, { recursive: 
 import userRoutes from './routes/userRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 
-app.use('/api/auth', userRoutes);
-app.use('/api/chats', chatRoutes);
+app.use('/api/auth', userRoutes);  // Auth endpoints
+app.use('/api/chats', chatRoutes); // Chat endpoints
 
 // ------------------ STATIC FILES ------------------
 app.use('/uploads', express.static(baseUploadDir));
 
 // ------------------ ROOT ------------------
 app.get('/', (req, res) => {
-  res.send('Backend API is running! Auth routes under /api/auth, chat routes under /api/chats');
+  res.send('✅ Backend is live! Auth routes under /api/auth, chat routes under /api/chats');
 });
 
 // ------------------ MONGODB CONNECTION ------------------
