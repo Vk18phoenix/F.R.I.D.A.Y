@@ -1,7 +1,6 @@
-// src/services/apiService.js
 import toast from "react-hot-toast";
 
-const API_BASE_URL = "http://localhost:5000/api"; // Updated to use your original URL
+const API_URL = import.meta.env.VITE_API_URL;
 
 const getToken = () => localStorage.getItem("authToken");
 
@@ -27,7 +26,7 @@ const apiRequest = async (method, path, data = null, includeAuth = true) => {
   };
 
   try {
-    const response = await fetch(`${API_BASE_URL}${path}`, config);
+    const response = await fetch(`${API_URL}${path}`, config);
     const responseData = await response.json().catch(() => ({}));
 
     if (!response.ok) {
@@ -91,3 +90,5 @@ export const deleteAccount = async (currentPassword) => {
 export const sendFeedbackApi = async (feedbackData) => {
   return apiRequest('POST', '/feedback', feedbackData);
 };
+
+export default API_URL;
