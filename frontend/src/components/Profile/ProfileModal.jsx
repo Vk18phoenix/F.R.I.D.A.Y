@@ -3,7 +3,9 @@ import toast from "react-hot-toast";
 import { useAuth } from "../../AuthContext"; // Adjust path based on your project structure
 import "./ProfileModal.css";
 
-const API_URL = "http://localhost:5000";
+// Backend base URL from env
+const API_URL = import.meta.env.VITE_API_BASE_URL.replace(/\/api\/auth$/, "");
+
 const EMOJIS = ["😊", "😎", "🚀", "🎉", "💻", "💡", "❤️", "🧠"];
 
 const ProfileModal = ({ onClose, onUpdate }) => {
