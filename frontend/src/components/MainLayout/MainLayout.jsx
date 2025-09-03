@@ -21,7 +21,7 @@ import {
 } from '../../services/apiService.js';
 import { useAuth } from '../../AuthContext';
 import aiLogo from "../../assets/ai-logo.png";
-import appLogo from "../../assets/Haven_Logo.png";
+import appLogo from "../../assets/Friday_Logo.png";
 
 const API_URL = "http://localhost:5000";
 const SpeechRecognition = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
@@ -236,10 +236,14 @@ const MainLayout = ({ onNavigateToAuth }) => {
     recognition.onend = () => setUiState(prev => ({ ...prev, isListening: false }));
   }, [uiState.isListening, handleSendMessage]);
 
+  // This handleProfileUpdate is for the ProfileModal to notify parent (MainLayout)
+  // But MainLayout already has its own useEffect to track user.avatar directly from AuthContext
   const handleProfileUpdate = useCallback((newUpdates) => {
     if (newUpdates?.avatar) {
       const fullUrl = newUpdates.avatar.startsWith("http") ? newUpdates.avatar : `${API_URL}${newUpdates.avatar}`;
       setAvatarUrl(fullUrl);
+      // Removed this toast as the ProfileModal already shows success toast
+      // toast.success("Profile picture updated!");
     }
   }, []);
 
@@ -414,6 +418,7 @@ const MainLayout = ({ onNavigateToAuth }) => {
           <div className="header-brand"> <span>Friday.AI</span> </div>
           {isAuthenticated ? (
             <img
+              key={avatarUrl} // ✨ ADD THIS KEY PROP ✨
               src={avatarUrl}
               className="user-avatar"
               alt="User Avatar"
@@ -469,8 +474,11 @@ const MainLayout = ({ onNavigateToAuth }) => {
       {uiState.showPaywall && <PaywallModal onClose={() => setUiState(prev => ({ ...prev, showPaywall: false, isGuestLocked: true }))} onAuth={onNavigateToAuth} />}
       {isAuthenticated && uiState.showProfileModal && (
         <ProfileModal
+          // user prop here is not strictly needed for the avatar update
+          // as ProfileModal accesses user directly via useAuth(),
+          // but if other parts of ProfileModal use it, it's fine.
           user={user}
-          onUpdate={handleProfileUpdate}
+          onUpdate={handleProfileUpdate} // This callback is still useful for general parent notification
           onClose={() => setUiState(prev => ({ ...prev, showProfileModal: false }))}
         />
       )}

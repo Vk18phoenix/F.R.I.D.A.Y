@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import toast from "react-hot-toast";
-import { useAuth } from "../../AuthContext";
+import { useAuth } from "../../AuthContext"; // Adjust path based on your project structure
 import "./ProfileModal.css";
 
 const API_URL = "http://localhost:5000";
 const EMOJIS = ["😊", "😎", "🚀", "🎉", "💻", "💡", "❤️", "🧠"];
 
 const ProfileModal = ({ onClose, onUpdate }) => {
-  const { user, setUser } = useAuth();
+  const { user, setUser } = useAuth(); // This component still needs user and setUser
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -68,13 +68,14 @@ const ProfileModal = ({ onClose, onUpdate }) => {
 
         const updatedUser = { ...data.user, avatar: avatarWithTimestamp };
 
-        setUser(updatedUser); // ✅ global update
+        setUser(updatedUser); // ✅ GLOBAL UPDATE - This is the key!
         localStorage.setItem("userInfo", JSON.stringify(updatedUser));
 
+        // Reset local state for the modal
         setPreviewUrl(null);
         setSelectedFile(null);
 
-        if (onUpdate) onUpdate(updatedUser);
+        if (onUpdate) onUpdate(updatedUser); // Notify parent, but avatar display is handled by context
       }
     } catch (error) {
       console.error("Error uploading avatar:", error);

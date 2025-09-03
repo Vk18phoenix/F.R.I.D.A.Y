@@ -4,7 +4,7 @@ import React from 'react';
 import Login from './Login.jsx';
 import Signup from './SignUp.jsx';
 import './AuthPage.css';
-import Logo from "../../assets/favicon.png"; 
+import Logo from "../../assets/Friday_Logo.png";
 
 // This component no longer needs 'onClose' because App.jsx handles the switch.
 // We remove `theme` because the CSS handles it with :root.

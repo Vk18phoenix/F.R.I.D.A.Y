@@ -1,9 +1,7 @@
 // src/App.jsx
 
-import React from 'react'; // No need for useState, useEffect directly in App.jsx anymore for auth state
-// Remove Firebase imports:
-// import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { AuthProvider, useAuth } from './AuthContext'; // Import AuthProvider and useAuth
+import React from 'react';
+import { AuthProvider, useAuth } from './AuthContext';
 import MainLayout from './components/MainLayout/MainLayout';
 import AuthPage from './components/Auth/AuthPage';
 import './App.css';
@@ -11,7 +9,6 @@ import './App.css';
 // This is your main App component logic. It will consume the AuthContext.
 const AppContent = () => {
   const { user, loading, isAuthenticated, logout } = useAuth(); // Use the auth context
-  // No more need for isAuthenticating state here if we route based on isAuthenticated
 
   if (loading) {
     return <div className="loading-container"><h2>Loading...</h2></div>;
@@ -21,11 +18,11 @@ const AppContent = () => {
     <div className="App">
       {isAuthenticated ? (
         // If authenticated, show MainLayout
-        // Pass user and logout function directly
-        <MainLayout user={user} onLogout={logout} />
+        // Pass logout function directly. MainLayout itself or its children
+        // will use useAuth() to get the current user object.
+        <MainLayout onLogout={logout} />
       ) : (
         // If not authenticated, show AuthPage
-        // AuthPage doesn't need props from here anymore as it will use AuthContext
         <AuthPage />
       )}
     </div>

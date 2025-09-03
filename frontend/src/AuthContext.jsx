@@ -1,3 +1,4 @@
+// src/AuthContext.js
 import React, { createContext, useState, useEffect, useContext } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -10,9 +11,10 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Correcting the API base URL to fix the compilation error.
+  // Base URL for backend auth routes
   const API_BASE_URL = "http://localhost:5000/api/auth";
 
+  // Load logged-in user on first render
   useEffect(() => {
     const loadUser = async () => {
       try {
@@ -21,18 +23,16 @@ export const AuthProvider = ({ children }) => {
           const res = await axios.get(`${API_BASE_URL}/me`, {
             headers: { Authorization: `Bearer ${token}` },
           });
+
           if (res.data.user) {
-            // ✅ Bust cache for avatar by adding a timestamp
+            // Append timestamp to avatar to avoid caching issues
             const avatarWithTimestamp = res.data.user.avatar
               ? (res.data.user.avatar.startsWith("http")
                   ? `${res.data.user.avatar}?t=${Date.now()}`
                   : `http://localhost:5000${res.data.user.avatar}?t=${Date.now()}`)
-              : null;
+              : "/default-avatar.png";
 
-            const updatedUser = {
-              ...res.data.user,
-              avatar: avatarWithTimestamp || "/default-avatar.png",
-            };
+            const updatedUser = { ...res.data.user, avatar: avatarWithTimestamp };
 
             setUser(updatedUser);
             setIsAuthenticated(true);
@@ -51,8 +51,9 @@ export const AuthProvider = ({ children }) => {
       }
     };
     loadUser();
-  }, [API_BASE_URL]);
+  }, []);
 
+  // ---------- LOGIN ----------
   const login = async (email, password) => {
     setLoading(true);
     try {
@@ -60,11 +61,9 @@ export const AuthProvider = ({ children }) => {
       const { token, user: loggedInUser } = res.data;
 
       if (!token || !loggedInUser) {
-        toast.error("Invalid server response");
-        return { success: false };
+        return { success: false, error: "Invalid server response" };
       }
 
-      // ✅ Bust cache on login
       const avatarWithTimestamp = loggedInUser.avatar
         ? (loggedInUser.avatar.startsWith("http")
             ? `${loggedInUser.avatar}?t=${Date.now()}`
@@ -81,15 +80,17 @@ export const AuthProvider = ({ children }) => {
       toast.success(`Welcome, ${loggedInUser.username || "user"}!`);
       return { success: true };
     } catch (error) {
-      toast.error(error.response?.data?.message || "Login failed");
+      const message = error.response?.data?.message || "Login failed";
+      toast.error(message);
       setUser(null);
       setIsAuthenticated(false);
-      return { success: false };
+      return { success: false, error: message };
     } finally {
       setLoading(false);
     }
   };
 
+  // ---------- LOGOUT ----------
   const logout = () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("userInfo");
@@ -98,12 +99,17 @@ export const AuthProvider = ({ children }) => {
     toast.success("Logged out successfully.");
   };
 
+  // ---------- REGISTER ----------
   const register = async (username, email, password) => {
     setLoading(true);
     try {
-      const res = await axios.post(`${API_BASE_URL}/register`, { username, email, password });
-      const { token, user: registeredUser } = res.data || {};
+      const res = await axios.post(`${API_BASE_URL}/register`, {
+        username,
+        email,
+        password,
+      });
 
+      const { token, user: registeredUser } = res.data || {};
       if (token && registeredUser) {
         const avatarWithTimestamp = registeredUser.avatar
           ? (registeredUser.avatar.startsWith("http")
@@ -117,9 +123,13 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem("userInfo", JSON.stringify(updatedUser));
         setUser(updatedUser);
         setIsAuthenticated(true);
-        toast.success(`Registration successful! Welcome, ${updatedUser.username || "user"}!`);
+        toast.success(
+          `Registration successful! Welcome, ${updatedUser.username || "user"}!`
+        );
       } else {
-        toast.success(res.data.message || "Registration successful! Please log in.");
+        toast.success(
+          res.data.message || "Registration successful! Please log in."
+        );
       }
       return { success: true };
     } catch (error) {
@@ -133,7 +143,18 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, isAuthenticated, setIsAuthenticated, loading, login, logout, register }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        setUser,
+        isAuthenticated,
+        setIsAuthenticated,
+        loading,
+        login,
+        logout,
+        register,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
