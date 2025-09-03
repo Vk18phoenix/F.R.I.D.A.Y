@@ -11,13 +11,17 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Use env variable, fallback to localhost for development
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/auth";
+  // Base URL from environment variable, fallback to live URL
+  const API_BASE_URL =
+    import.meta.env.VITE_API_BASE_URL ||
+    "https://f-r-i-d-a-y-aijh.onrender.com/api/auth";
 
   // Safely build backend URL for avatars
-  const BACKEND_URL = API_BASE_URL?.endsWith("/api/auth")
-    ? API_BASE_URL.replace(/\/api\/auth$/, "")
-    : API_BASE_URL || "http://localhost:5000";
+  const BACKEND_URL = API_BASE_URL
+    ? API_BASE_URL.endsWith("/api/auth")
+      ? API_BASE_URL.replace(/\/api\/auth$/, "")
+      : API_BASE_URL
+    : "https://f-r-i-d-a-y-aijh.onrender.com";
 
   // ------------------ Load logged-in user ------------------
   useEffect(() => {
@@ -31,9 +35,9 @@ export const AuthProvider = ({ children }) => {
 
           if (res.data?.user) {
             const avatarWithTimestamp = res.data.user.avatar
-              ? (res.data.user.avatar.startsWith("http")
-                  ? `${res.data.user.avatar}?t=${Date.now()}`
-                  : `${BACKEND_URL}${res.data.user.avatar}?t=${Date.now()}`)
+              ? res.data.user.avatar.startsWith("http")
+                ? `${res.data.user.avatar}?t=${Date.now()}`
+                : `${BACKEND_URL}${res.data.user.avatar}?t=${Date.now()}`
               : "/default-avatar.png";
 
             const updatedUser = { ...res.data.user, avatar: avatarWithTimestamp };
@@ -54,7 +58,7 @@ export const AuthProvider = ({ children }) => {
       }
     };
     loadUser();
-  }, []);
+  }, [API_BASE_URL, BACKEND_URL]);
 
   // ------------------ LOGIN ------------------
   const login = async (email, password) => {
@@ -63,14 +67,12 @@ export const AuthProvider = ({ children }) => {
       const res = await axios.post(`${API_BASE_URL}/login`, { email, password });
       const { token, user: loggedInUser } = res.data;
 
-      if (!token || !loggedInUser) {
-        return { success: false, error: "Invalid server response" };
-      }
+      if (!token || !loggedInUser) return { success: false, error: "Invalid server response" };
 
       const avatarWithTimestamp = loggedInUser.avatar
-        ? (loggedInUser.avatar.startsWith("http")
-            ? `${loggedInUser.avatar}?t=${Date.now()}`
-            : `${BACKEND_URL}${loggedInUser.avatar}?t=${Date.now()}`)
+        ? loggedInUser.avatar.startsWith("http")
+          ? `${loggedInUser.avatar}?t=${Date.now()}`
+          : `${BACKEND_URL}${loggedInUser.avatar}?t=${Date.now()}`
         : "/default-avatar.png";
 
       const updatedUser = { ...loggedInUser, avatar: avatarWithTimestamp };
@@ -111,9 +113,9 @@ export const AuthProvider = ({ children }) => {
 
       if (token && registeredUser) {
         const avatarWithTimestamp = registeredUser.avatar
-          ? (registeredUser.avatar.startsWith("http")
-              ? `${registeredUser.avatar}?t=${Date.now()}`
-              : `${BACKEND_URL}${registeredUser.avatar}?t=${Date.now()}`)
+          ? registeredUser.avatar.startsWith("http")
+            ? `${registeredUser.avatar}?t=${Date.now()}`
+            : `${BACKEND_URL}${registeredUser.avatar}?t=${Date.now()}`
           : "/default-avatar.png";
 
         const updatedUser = { ...registeredUser, avatar: avatarWithTimestamp };
