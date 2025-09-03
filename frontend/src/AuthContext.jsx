@@ -11,39 +11,45 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Base URL from environment variable
+  // Base URL from environment variable (fallback to localhost)
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/auth";
-  
-  // Safely build backend URL for avatars
-  const BACKEND_URL = API_BASE_URL.endsWith("/api/auth")
-    ? API_BASE_URL.replace(/\/api\/auth$/, "")
-    : API_BASE_URL;
+
+  // Backend base URL for avatars
+  const BACKEND_URL = API_BASE_URL.replace(/\/api\/auth$/, "");
+
+  // Helper: Build avatar URL safely
+  const buildAvatarUrl = (avatarPath) => {
+    if (!avatarPath) return "/default-avatar.png"; // fallback
+    return avatarPath.startsWith("http")
+      ? avatarPath
+      : `${BACKEND_URL}${avatarPath}`;
+  };
 
   // ------------------ Load logged-in user ------------------
   useEffect(() => {
     const loadUser = async () => {
       try {
         const token = localStorage.getItem("authToken");
-        if (token) {
-          const res = await axios.get(`${API_BASE_URL}/me`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+        if (!token) {
+          setLoading(false);
+          return;
+        }
 
-          if (res.data.user) {
-            const avatarWithTimestamp = res.data.user.avatar
-              ? (res.data.user.avatar.startsWith("http")
-                  ? `${res.data.user.avatar}?t=${Date.now()}`
-                  : `${BACKEND_URL}${res.data.user.avatar}?t=${Date.now()}`)
-              : "/default-avatar.png";
+        const res = await axios.get(`${API_BASE_URL}/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-            const updatedUser = { ...res.data.user, avatar: avatarWithTimestamp };
-            setUser(updatedUser);
-            setIsAuthenticated(true);
-            localStorage.setItem("userInfo", JSON.stringify(updatedUser));
-          } else {
-            localStorage.removeItem("authToken");
-            localStorage.removeItem("userInfo");
-          }
+        if (res.data.user) {
+          const updatedUser = { 
+            ...res.data.user, 
+            avatar: buildAvatarUrl(res.data.user.avatar) 
+          };
+          setUser(updatedUser);
+          setIsAuthenticated(true);
+          localStorage.setItem("userInfo", JSON.stringify(updatedUser));
+        } else {
+          localStorage.removeItem("authToken");
+          localStorage.removeItem("userInfo");
         }
       } catch (error) {
         console.error("Auth initialization failed:", error);
@@ -68,13 +74,10 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: "Invalid server response" };
       }
 
-      const avatarWithTimestamp = loggedInUser.avatar
-        ? (loggedInUser.avatar.startsWith("http")
-            ? `${loggedInUser.avatar}?t=${Date.now()}`
-            : `${BACKEND_URL}${loggedInUser.avatar}?t=${Date.now()}`)
-        : "/default-avatar.png";
-
-      const updatedUser = { ...loggedInUser, avatar: avatarWithTimestamp };
+      const updatedUser = { 
+        ...loggedInUser, 
+        avatar: buildAvatarUrl(loggedInUser.avatar) 
+      };
 
       localStorage.setItem("authToken", token);
       localStorage.setItem("userInfo", JSON.stringify(updatedUser));
@@ -111,13 +114,10 @@ export const AuthProvider = ({ children }) => {
       const { token, user: registeredUser } = res.data || {};
 
       if (token && registeredUser) {
-        const avatarWithTimestamp = registeredUser.avatar
-          ? (registeredUser.avatar.startsWith("http")
-              ? `${registeredUser.avatar}?t=${Date.now()}`
-              : `${BACKEND_URL}${registeredUser.avatar}?t=${Date.now()}`)
-          : "/default-avatar.png";
-
-        const updatedUser = { ...registeredUser, avatar: avatarWithTimestamp };
+        const updatedUser = { 
+          ...registeredUser, 
+          avatar: buildAvatarUrl(registeredUser.avatar) 
+        };
 
         localStorage.setItem("authToken", token);
         localStorage.setItem("userInfo", JSON.stringify(updatedUser));
