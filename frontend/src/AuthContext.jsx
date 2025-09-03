@@ -11,36 +11,37 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Base URL from environment variable
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // Backend URL for avatars (remove /api/auth)
-  const BACKEND_URL = API_BASE_URL.replace(/\/api\/auth$/, "");
+  // Base URL for backend auth routes
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/auth";
+
+  // Backend base URL for avatars (safe fallback)
+  const BACKEND_URL = API_BASE_URL ? API_BASE_URL.replace(/\/api\/auth$/, "") : "http://localhost:5000";
 
   // ------------------ Load logged-in user ------------------
   useEffect(() => {
     const loadUser = async () => {
       try {
         const token = localStorage.getItem("authToken");
-        if (token) {
-          const res = await axios.get(`${API_BASE_URL}/me`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+        if (!token) return setLoading(false);
 
-          if (res.data.user) {
-            const avatarWithTimestamp = res.data.user.avatar
-              ? (res.data.user.avatar.startsWith("http")
-                  ? `${res.data.user.avatar}?t=${Date.now()}`
-                  : `${BACKEND_URL}${res.data.user.avatar}?t=${Date.now()}`)
-              : "/default-avatar.png";
+        const res = await axios.get(`${API_BASE_URL}/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-            const updatedUser = { ...res.data.user, avatar: avatarWithTimestamp };
-            setUser(updatedUser);
-            setIsAuthenticated(true);
-            localStorage.setItem("userInfo", JSON.stringify(updatedUser));
-          } else {
-            localStorage.removeItem("authToken");
-            localStorage.removeItem("userInfo");
-          }
+        if (res.data.user) {
+          const avatarWithTimestamp = res.data.user.avatar
+            ? (res.data.user.avatar.startsWith("http")
+                ? `${res.data.user.avatar}?t=${Date.now()}`
+                : `${BACKEND_URL}${res.data.user.avatar}?t=${Date.now()}`)
+            : "/default-avatar.png";
+
+          const updatedUser = { ...res.data.user, avatar: avatarWithTimestamp };
+          setUser(updatedUser);
+          setIsAuthenticated(true);
+          localStorage.setItem("userInfo", JSON.stringify(updatedUser));
+        } else {
+          localStorage.removeItem("authToken");
+          localStorage.removeItem("userInfo");
         }
       } catch (error) {
         console.error("Auth initialization failed:", error);
