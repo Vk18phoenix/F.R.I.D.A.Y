@@ -23,14 +23,14 @@ const allowedOrigins = [
 ].filter(Boolean);
 
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true); // allow tools like Postman/curl
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like Postman or curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    console.warn(`⚠️ CORS blocked for origin: ${origin}`);
     return callback(new Error(`CORS policy does not allow access from: ${origin}`), false);
   },
-  credentials: true, // required if using cookies or auth headers
+  credentials: true, // allow cookies & auth headers
 }));
 
 // ------------------ BODY PARSERS ------------------
