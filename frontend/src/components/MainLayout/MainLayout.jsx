@@ -23,7 +23,8 @@ import { useAuth } from '../../AuthContext';
 import aiLogo from "../../assets/ai-logo.png";
 import appLogo from "../../assets/Friday_Logo.png";
 
-const API_URL = import.meta.env.VITE_API_BASE_URL.replace(/\/api\/auth$/, "");;
+const API_URL = import.meta.env.VITE_API_BASE_URL || "https://f-r-i-d-a-y-aijh.onrender.com";
+
 const SpeechRecognition = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
 const BANNED_KEYWORDS = ['kill', 'suicide', 'bomb', 'terrorist', 'hate speech'];
 const nowId = () => Date.now().toString();

@@ -1,13 +1,10 @@
-// src/components/Profile/ProfileModal.jsx
 import React, { useState } from "react";
 import toast from "react-hot-toast";
-import { useAuth } from "../../AuthContext"; // Adjust path based on your project structure
+import { useAuth } from "../../AuthContext";
 import "./ProfileModal.css";
 
-// Safely get backend URL from env, fallback to live backend
-const API_URL = import.meta.env.VITE_API_BASE_URL
-  ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/auth$/, "")
-  : "https://f-r-i-d-a-y-aijh.onrender.com";
+// Backend base URL: use env if available, fallback to live backend
+const API_URL = import.meta.env.VITE_API_BASE_URL || "https://f-r-i-d-a-y-aijh.onrender.com";
 
 const EMOJIS = ["😊", "😎", "🚀", "🎉", "💻", "💡", "❤️", "🧠"];
 
@@ -66,6 +63,7 @@ const ProfileModal = ({ onClose, onUpdate }) => {
       setFeedback("Avatar uploaded successfully!");
 
       if (data.user) {
+        // Add timestamp to break browser cache
         const avatarWithTimestamp = data.user.avatar?.startsWith("http")
           ? `${data.user.avatar}?t=${Date.now()}`
           : `${API_URL}${data.user.avatar}?t=${Date.now()}`;
@@ -74,6 +72,7 @@ const ProfileModal = ({ onClose, onUpdate }) => {
         setUser(updatedUser);
         localStorage.setItem("userInfo", JSON.stringify(updatedUser));
 
+        // Reset modal state
         setPreviewUrl(null);
         setSelectedFile(null);
 

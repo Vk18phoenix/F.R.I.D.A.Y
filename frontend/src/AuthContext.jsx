@@ -1,4 +1,3 @@
-// src/AuthContext.jsx
 import React, { createContext, useState, useEffect, useContext } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -11,16 +10,12 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Base API URL from env or fallback to live backend
+  // Directly use backend URL from env or fallback to live backend
   const API_BASE_URL =
     import.meta.env.VITE_API_BASE_URL || "https://f-r-i-d-a-y-aijh.onrender.com/api/auth";
 
-  // Safely build backend URL for avatars
-  const BACKEND_URL = API_BASE_URL
-    ? API_BASE_URL.endsWith("/api/auth")
-      ? API_BASE_URL.replace(/\/api\/auth$/, "")
-      : API_BASE_URL
-    : "https://f-r-i-d-a-y-aijh.onrender.com";
+  // Backend root URL for avatar paths
+  const BACKEND_URL = API_BASE_URL.replace("/api/auth", "") || "https://f-r-i-d-a-y-aijh.onrender.com";
 
   // ------------------ Load logged-in user ------------------
   useEffect(() => {
@@ -66,9 +61,7 @@ export const AuthProvider = ({ children }) => {
       const res = await axios.post(`${API_BASE_URL}/login`, { email, password });
       const { token, user: loggedInUser } = res.data;
 
-      if (!token || !loggedInUser) {
-        return { success: false, error: "Invalid server response" };
-      }
+      if (!token || !loggedInUser) return { success: false, error: "Invalid server response" };
 
       const avatarWithTimestamp = loggedInUser.avatar
         ? (loggedInUser.avatar.startsWith("http")
