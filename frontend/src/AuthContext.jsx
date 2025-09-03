@@ -12,7 +12,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   // Base URL for backend auth routes
-  const API_BASE_URL = "http://localhost:5000/api/auth";
+  const API_BASE_URL = "import.meta.env.VITE_API_BASE_URL;";
 
   // Load logged-in user on first render
   useEffect(() => {
