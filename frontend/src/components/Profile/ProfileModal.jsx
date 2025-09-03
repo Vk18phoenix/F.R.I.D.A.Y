@@ -3,8 +3,7 @@ import toast from "react-hot-toast";
 import { useAuth } from "../../AuthContext";
 import "./ProfileModal.css";
 
-// Backend base URL: use env if available, fallback to live backend
-const API_URL = import.meta.env.VITE_API_BASE_URL || "https://f-r-i-d-a-y-aijh.onrender.com";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://f-r-i-d-a-y-aijh.onrender.com/api/auth";
 
 const EMOJIS = ["😊", "😎", "🚀", "🎉", "💻", "💡", "❤️", "🧠"];
 
@@ -19,26 +18,17 @@ const ProfileModal = ({ onClose, onUpdate }) => {
 
   const handleFileChange = (e) => {
     if (e.target.files?.[0]) {
-      const file = e.target.files[0];
-      setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
+      setSelectedFile(e.target.files[0]);
+      setPreviewUrl(URL.createObjectURL(e.target.files[0]));
       setFeedback("File selected. Ready to upload.");
     }
   };
 
   const handleAvatarUpload = async (fileToUpload = selectedFile) => {
-    if (!fileToUpload) {
-      toast.error("Please select a file to upload");
-      setFeedback("Please select a file to upload.");
-      return;
-    }
+    if (!fileToUpload) return toast.error("Select a file.");
 
     const token = getToken();
-    if (!token) {
-      toast.error("Authentication failed. Please log in again.");
-      setFeedback("Authentication failed. Please log in again.");
-      return;
-    }
+    if (!token) return toast.error("Please log in.");
 
     const formData = new FormData();
     formData.append("avatar", fileToUpload);
@@ -47,7 +37,7 @@ const ProfileModal = ({ onClose, onUpdate }) => {
       setUploading(true);
       setFeedback("Uploading avatar...");
 
-      const res = await fetch(`${API_URL}/api/auth/profile/avatar`, {
+      const res = await fetch(`${API_BASE_URL}/profile/avatar`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -55,116 +45,52 @@ const ProfileModal = ({ onClose, onUpdate }) => {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || `Error: ${res.status} ${res.statusText}`);
+        throw new Error(errData.message || `Error: ${res.status}`);
       }
 
       const data = await res.json();
-      toast.success("Avatar uploaded successfully!");
-      setFeedback("Avatar uploaded successfully!");
+      toast.success("Avatar updated!");
 
       if (data.user) {
-        // Add timestamp to break browser cache
-        const avatarWithTimestamp = data.user.avatar?.startsWith("http")
+        const avatar = data.user.avatar.startsWith("http")
           ? `${data.user.avatar}?t=${Date.now()}`
-          : `${API_URL}${data.user.avatar}?t=${Date.now()}`;
+          : `${API_BASE_URL.replace("/api/auth","")}${data.user.avatar}?t=${Date.now()}`;
 
-        const updatedUser = { ...data.user, avatar: avatarWithTimestamp };
+        const updatedUser = { ...data.user, avatar };
         setUser(updatedUser);
         localStorage.setItem("userInfo", JSON.stringify(updatedUser));
 
-        // Reset modal state
         setPreviewUrl(null);
         setSelectedFile(null);
 
         if (onUpdate) onUpdate(updatedUser);
       }
     } catch (error) {
-      console.error("Error uploading avatar:", error);
-      toast.error(error.message || "Error uploading avatar");
+      toast.error(error.message || "Upload failed");
       setFeedback(`Error: ${error.message}`);
     } finally {
       setUploading(false);
     }
   };
 
-  const handleEmojiSelect = async (emoji) => {
-    setFeedback("Generating emoji picture...");
-    setUploading(true);
-
-    const canvas = document.createElement("canvas");
-    const size = 256;
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext("2d");
-
-    ctx.fillStyle = "#3a3d40";
-    ctx.beginPath();
-    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2, true);
-    ctx.fill();
-
-    ctx.fillStyle = "white";
-    ctx.font = `${size * 0.6}px sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(emoji, size / 2, size / 2);
-
-    canvas.toBlob(async (blob) => {
-      if (blob) {
-        await handleAvatarUpload(new File([blob], "emoji.png", { type: "image/png" }));
-      } else {
-        setFeedback("Failed to generate emoji image.");
-        setUploading(false);
-      }
-    }, "image/png");
-  };
-
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <h2>Update Profile Picture</h2>
-        <p className="feedback-text">{feedback}</p>
-
+        <p>{feedback}</p>
         <div className="avatar-preview">
           <img
             src={previewUrl || user?.avatar || "/default-avatar.png"}
             alt="Avatar Preview"
-            style={{ width: "120px", height: "120px", borderRadius: "50%" }}
+            style={{ width: 120, height: 120, borderRadius: "50%" }}
           />
         </div>
-
-        <div className="upload-section">
-          <label className="upload-button-label">
-            Choose an Image
-            <input
-              type="file"
-              onChange={handleFileChange}
-              accept="image/*"
-              disabled={uploading}
-              style={{ display: "none" }}
-            />
-          </label>
-          <button onClick={() => handleAvatarUpload(selectedFile)} disabled={uploading}>
-            {uploading ? "Uploading..." : "Upload Avatar"}
-          </button>
-        </div>
-
-        <div className="emoji-section">
-          <p>Or select an emoji:</p>
-          <div className="emoji-grid">
-            {EMOJIS.map((emoji) => (
-              <div
-                key={emoji}
-                className={`emoji-item ${uploading ? "disabled" : ""}`}
-                onClick={() => !uploading && handleEmojiSelect(emoji)}
-              >
-                {emoji}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <button className="close-button" onClick={onClose} disabled={uploading}>
-          {uploading ? "Please wait..." : "Cancel"}
+        <input type="file" accept="image/*" onChange={handleFileChange} disabled={uploading} />
+        <button onClick={() => handleAvatarUpload(selectedFile)} disabled={uploading}>
+          {uploading ? "Uploading..." : "Upload Avatar"}
+        </button>
+        <button onClick={onClose} disabled={uploading}>
+          Cancel
         </button>
       </div>
     </div>

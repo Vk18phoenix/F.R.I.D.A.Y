@@ -10,12 +10,8 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Directly use backend URL from env or fallback to live backend
-  const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || "https://f-r-i-d-a-y-aijh.onrender.com/api/auth";
-
-  // Backend root URL for avatar paths
-  const BACKEND_URL = API_BASE_URL.replace("/api/auth", "") || "https://f-r-i-d-a-y-aijh.onrender.com";
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://f-r-i-d-a-y-aijh.onrender.com/api/auth";
+  const BACKEND_URL = API_BASE_URL.replace("/api/auth", "");
 
   // ------------------ Load logged-in user ------------------
   useEffect(() => {
@@ -28,13 +24,11 @@ export const AuthProvider = ({ children }) => {
           });
 
           if (res.data?.user) {
-            const avatarWithTimestamp = res.data.user.avatar
-              ? (res.data.user.avatar.startsWith("http")
-                  ? `${res.data.user.avatar}?t=${Date.now()}`
-                  : `${BACKEND_URL}${res.data.user.avatar}?t=${Date.now()}`)
+            const avatar = res.data.user.avatar
+              ? `${BACKEND_URL}${res.data.user.avatar}?t=${Date.now()}`
               : "/default-avatar.png";
 
-            const updatedUser = { ...res.data.user, avatar: avatarWithTimestamp };
+            const updatedUser = { ...res.data.user, avatar };
             setUser(updatedUser);
             setIsAuthenticated(true);
             localStorage.setItem("userInfo", JSON.stringify(updatedUser));
@@ -61,25 +55,23 @@ export const AuthProvider = ({ children }) => {
       const res = await axios.post(`${API_BASE_URL}/login`, { email, password });
       const { token, user: loggedInUser } = res.data;
 
-      if (!token || !loggedInUser) return { success: false, error: "Invalid server response" };
+      if (!token || !loggedInUser) throw new Error("Invalid server response");
 
-      const avatarWithTimestamp = loggedInUser.avatar
-        ? (loggedInUser.avatar.startsWith("http")
-            ? `${loggedInUser.avatar}?t=${Date.now()}`
-            : `${BACKEND_URL}${loggedInUser.avatar}?t=${Date.now()}`)
+      const avatar = loggedInUser.avatar
+        ? `${BACKEND_URL}${loggedInUser.avatar}?t=${Date.now()}`
         : "/default-avatar.png";
 
-      const updatedUser = { ...loggedInUser, avatar: avatarWithTimestamp };
+      const updatedUser = { ...loggedInUser, avatar };
 
       localStorage.setItem("authToken", token);
       localStorage.setItem("userInfo", JSON.stringify(updatedUser));
       setUser(updatedUser);
       setIsAuthenticated(true);
 
-      toast.success(`Welcome, ${loggedInUser.username || "user"}!`);
+      toast.success(`Welcome, ${updatedUser.username || "user"}!`);
       return { success: true };
     } catch (error) {
-      const message = error.response?.data?.message || "Login failed";
+      const message = error.response?.data?.message || error.message || "Login failed";
       toast.error(message);
       setUser(null);
       setIsAuthenticated(false);
@@ -105,31 +97,27 @@ export const AuthProvider = ({ children }) => {
       const res = await axios.post(`${API_BASE_URL}/register`, { username, email, password });
       const { token, user: registeredUser } = res.data || {};
 
-      if (token && registeredUser) {
-        const avatarWithTimestamp = registeredUser.avatar
-          ? (registeredUser.avatar.startsWith("http")
-              ? `${registeredUser.avatar}?t=${Date.now()}`
-              : `${BACKEND_URL}${registeredUser.avatar}?t=${Date.now()}`)
-          : "/default-avatar.png";
+      if (!token || !registeredUser) throw new Error("Invalid server response");
 
-        const updatedUser = { ...registeredUser, avatar: avatarWithTimestamp };
+      const avatar = registeredUser.avatar
+        ? `${BACKEND_URL}${registeredUser.avatar}?t=${Date.now()}`
+        : "/default-avatar.png";
 
-        localStorage.setItem("authToken", token);
-        localStorage.setItem("userInfo", JSON.stringify(updatedUser));
-        setUser(updatedUser);
-        setIsAuthenticated(true);
+      const updatedUser = { ...registeredUser, avatar };
 
-        toast.success(`Registration successful! Welcome, ${updatedUser.username || "user"}!`);
-      } else {
-        toast.success(res.data?.message || "Registration successful! Please log in.");
-      }
+      localStorage.setItem("authToken", token);
+      localStorage.setItem("userInfo", JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      setIsAuthenticated(true);
 
+      toast.success(`Welcome, ${updatedUser.username || "user"}!`);
       return { success: true };
     } catch (error) {
-      toast.error(error.response?.data?.message || "Registration failed");
+      const message = error.response?.data?.message || error.message || "Registration failed";
+      toast.error(message);
       setUser(null);
       setIsAuthenticated(false);
-      return { success: false };
+      return { success: false, error: message };
     } finally {
       setLoading(false);
     }
@@ -137,16 +125,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider
-      value={{
-        user,
-        setUser,
-        isAuthenticated,
-        setIsAuthenticated,
-        loading,
-        login,
-        logout,
-        register,
-      }}
+      value={{ user, setUser, isAuthenticated, setIsAuthenticated, loading, login, logout, register }}
     >
       {children}
     </AuthContext.Provider>

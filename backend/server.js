@@ -15,29 +15,27 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ------------------ CORS CONFIG ------------------
-// Allowed origins: local dev + deployed frontend
 const allowedOrigins = [
-  'http://localhost:3000', // CRA local dev
-  'http://localhost:5173', // Vite local dev
-  process.env.CLIENT_URL   // deployed frontend (Vercel)
+  'http://localhost:3000', // CRA dev
+  'http://localhost:5173', // Vite dev
+  process.env.CLIENT_URL,   // deployed frontend
 ].filter(Boolean);
 
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like Postman or curl)
-    if (!origin) return callback(null, true);
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // allow Postman/curl
     if (allowedOrigins.includes(origin)) return callback(null, true);
     console.warn(`⚠️ CORS blocked for origin: ${origin}`);
     return callback(new Error(`CORS policy does not allow access from: ${origin}`), false);
   },
-  credentials: true, // allow cookies & auth headers
+  credentials: true, // allow cookies/auth headers
 }));
 
 // ------------------ BODY PARSERS ------------------
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ------------------ UPLOADS FOLDERS ------------------
+// ------------------ UPLOAD FOLDERS ------------------
 const baseUploadDir = path.join(__dirname, 'uploads');
 const avatarUploadDir = path.join(baseUploadDir, 'avatars');
 
@@ -48,8 +46,9 @@ if (!fs.existsSync(avatarUploadDir)) fs.mkdirSync(avatarUploadDir, { recursive: 
 import userRoutes from './routes/userRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 
-app.use('/api/auth', userRoutes);  // Auth endpoints
-app.use('/api/chats', chatRoutes); // Chat endpoints
+// ❌ Do NOT use full URL here. Only paths.
+app.use('/api/auth', userRoutes);
+app.use('/api/chats', chatRoutes);
 
 // ------------------ STATIC FILES ------------------
 app.use('/uploads', express.static(baseUploadDir));
