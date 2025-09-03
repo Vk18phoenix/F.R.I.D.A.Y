@@ -1,15 +1,18 @@
+// src/components/Profile/ProfileModal.jsx
 import React, { useState } from "react";
 import toast from "react-hot-toast";
 import { useAuth } from "../../AuthContext"; // Adjust path based on your project structure
 import "./ProfileModal.css";
 
-// Backend base URL from env
-const API_URL = import.meta.env.VITE_API_BASE_URL.replace(/\/api\/auth$/, "");
+// Safely get backend URL from env, fallback to live backend
+const API_URL = import.meta.env.VITE_API_BASE_URL
+  ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/auth$/, "")
+  : "https://f-r-i-d-a-y-aijh.onrender.com";
 
 const EMOJIS = ["😊", "😎", "🚀", "🎉", "💻", "💡", "❤️", "🧠"];
 
 const ProfileModal = ({ onClose, onUpdate }) => {
-  const { user, setUser } = useAuth(); // This component still needs user and setUser
+  const { user, setUser } = useAuth();
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -18,10 +21,10 @@ const ProfileModal = ({ onClose, onUpdate }) => {
   const getToken = () => localStorage.getItem("authToken") || null;
 
   const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
+    if (e.target.files?.[0]) {
       const file = e.target.files[0];
       setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file)); // 👈 show preview before upload
+      setPreviewUrl(URL.createObjectURL(file));
       setFeedback("File selected. Ready to upload.");
     }
   };
@@ -63,21 +66,18 @@ const ProfileModal = ({ onClose, onUpdate }) => {
       setFeedback("Avatar uploaded successfully!");
 
       if (data.user) {
-        // ✅ Force refresh with timestamp to break cache
         const avatarWithTimestamp = data.user.avatar?.startsWith("http")
           ? `${data.user.avatar}?t=${Date.now()}`
           : `${API_URL}${data.user.avatar}?t=${Date.now()}`;
 
         const updatedUser = { ...data.user, avatar: avatarWithTimestamp };
-
-        setUser(updatedUser); // ✅ GLOBAL UPDATE - This is the key!
+        setUser(updatedUser);
         localStorage.setItem("userInfo", JSON.stringify(updatedUser));
 
-        // Reset local state for the modal
         setPreviewUrl(null);
         setSelectedFile(null);
 
-        if (onUpdate) onUpdate(updatedUser); // Notify parent, but avatar display is handled by context
+        if (onUpdate) onUpdate(updatedUser);
       }
     } catch (error) {
       console.error("Error uploading avatar:", error);
@@ -125,7 +125,6 @@ const ProfileModal = ({ onClose, onUpdate }) => {
         <h2>Update Profile Picture</h2>
         <p className="feedback-text">{feedback}</p>
 
-        {/* ✅ Preview section */}
         <div className="avatar-preview">
           <img
             src={previewUrl || user?.avatar || "/default-avatar.png"}
