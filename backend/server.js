@@ -15,22 +15,23 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ------------------ CORS ------------------
+// Allowed origins: local dev + deployed frontend
 const allowedOrigins = [
-  'http://localhost:3000',   // CRA
-  'http://localhost:5173',   // Vite
-  process.env.CLIENT_URL     // Your deployed frontend (Render/Netlify/etc)
-].filter(Boolean); // remove undefined
+  'http://localhost:3000', // CRA
+  'http://localhost:5173', // Vite
+  process.env.CLIENT_URL   // deployed frontend
+].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true); // allow curl/postman/mobile
+    if (!origin) return callback(null, true); // allow tools like Postman/curl
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
     const msg = `The CORS policy does not allow access from: ${origin}`;
     return callback(new Error(msg), false);
   },
-  credentials: true,
+  credentials: true, // if using cookies or auth headers
 }));
 
 // ------------------ BODY PARSERS ------------------
@@ -40,6 +41,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // ------------------ UPLOADS FOLDERS ------------------
 const baseUploadDir = path.join(__dirname, 'uploads');
 const avatarUploadDir = path.join(baseUploadDir, 'avatars');
+
 if (!fs.existsSync(baseUploadDir)) fs.mkdirSync(baseUploadDir, { recursive: true });
 if (!fs.existsSync(avatarUploadDir)) fs.mkdirSync(avatarUploadDir, { recursive: true });
 
@@ -47,10 +49,7 @@ if (!fs.existsSync(avatarUploadDir)) fs.mkdirSync(avatarUploadDir, { recursive: 
 import userRoutes from './routes/userRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 
-// ✅ Auth endpoints → /api/auth/...
 app.use('/api/auth', userRoutes);
-
-// ✅ Chat endpoints → /api/chats/...
 app.use('/api/chats', chatRoutes);
 
 // ------------------ STATIC FILES ------------------
